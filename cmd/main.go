@@ -8,6 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 	"os"
 	"strings"
+	"time"
 )
 
 func readMysqlPwd() string {
@@ -62,6 +63,9 @@ func correctDb(passwd string, trafficLimits map[string]int64) {
 		panic(err.Error())
 	}
 	defer db.Close()
+	db.SetMaxOpenConns(10)                 // 设置最大打开的连接数
+	db.SetMaxIdleConns(5)                  // 设置连接池中的最大空闲连接数
+	db.SetConnMaxLifetime(time.Minute * 5) // 设置连接的最大复用时间
 
 	for name, trafficLimit := range trafficLimits {
 		selectQuery := "select traffic_limit from kvm_available where name = ? limit 1"
@@ -69,14 +73,13 @@ func correctDb(passwd string, trafficLimits map[string]int64) {
 		if err != nil {
 			panic(err.Error())
 		}
-		defer rows.Close()
-
 		if rows.Next() {
 			var limit int64
 			err := rows.Scan(&limit)
 			if err != nil {
 				panic(err.Error())
 			}
+			rows.Close()
 			if limit != trafficLimit {
 				fmt.Println(name, "数据有误:", limit, trafficLimit)
 				updateQuery := "update kvm_available set traffic_limit = ? where name = ?"
