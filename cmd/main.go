@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/tidwall/gjson"
 	"os"
 	"strings"
@@ -55,13 +56,32 @@ func readInstanceTrafficLimits(filepath string) map[string]int64 {
 	return trafficLimits
 }
 
-func correctDb(passwd string) {
-	db, err := sql.Open("mysql", "username:"+passwd+"@tcp(127.0.0.1:3306)/node")
+func correctDb(passwd string, trafficLimits map[string]int64) {
+	db, err := sql.Open("mysql", "root:"+passwd+"@tcp(127.0.0.1:3306)/node")
 	if err != nil {
 		panic(err.Error())
 	}
 	defer db.Close()
 
+	for name, trafficLimit := range trafficLimits {
+		selectQuery := "select traffic_limit from kvm_available where name = ? limit 1"
+		rows, err := db.Query(selectQuery, name)
+		if err != nil {
+			panic(err.Error())
+		}
+		defer rows.Close()
+
+		if rows.Next() {
+			var limit int64
+			err := rows.Scan(&limit)
+			if err != nil {
+				panic(err.Error())
+			}
+			if limit != trafficLimit {
+				fmt.Println(name, "数据有误:", limit, trafficLimit)
+			}
+		}
+	}
 }
 
 func main() {
@@ -76,5 +96,5 @@ func main() {
 		count++
 	}
 
-	//correctDb(passwd)
+	correctDb(passwd, trafficLimits)
 }
