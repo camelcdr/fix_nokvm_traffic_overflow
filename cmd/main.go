@@ -33,21 +33,22 @@ func readMysqlPwd() string {
 	panic("获取密码失败")
 }
 
-func readInstanceTrafficLimits() map[string]string {
-	trafficLimits := make(map[string]string)
-	var filepath = "/home/nokvm/nokvm.data"
-	file, err := os.Open(filepath)
+func readInstanceTrafficLimits(filepath string) map[string]int64 {
+	fmt.Println("开始读取nokvm.data文件...")
+	trafficLimits := make(map[string]int64)
+
+	json, err := os.ReadFile(filepath)
+	fmt.Println("成功读取nokvm.data文件.")
+
+	guests := gjson.Get(string(json), "Guests")
 	if err != nil {
+		fmt.Println("读取nokvm.data文件失败", err)
 		return trafficLimits
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	json := scanner.Text()
-	guests := gjson.Get(json, "Guests")
 	guests.ForEach(func(key, value gjson.Result) bool {
-		name := gjson.Get(json, "name").String()
-		trafficLimit := gjson.Get(json, "traffic_limit").String()
+		s := value.String()
+		name := gjson.Get(s, "name").String()
+		trafficLimit := gjson.Get(s, "traffic_limit").Int()
 		trafficLimits[name] = trafficLimit
 		return true
 	})
@@ -67,7 +68,8 @@ func main() {
 	passwd := readMysqlPwd()
 	fmt.Println("当前的nokvm被控的数据库密码为：", passwd)
 
-	trafficLimits := readInstanceTrafficLimits()
+	var filepath = "/home/nokvm/nokvm.data"
+	trafficLimits := readInstanceTrafficLimits(filepath)
 	count := 0
 	for name, traffic := range trafficLimits {
 		fmt.Println(count, "\tName:", name, "traffic:", traffic)
