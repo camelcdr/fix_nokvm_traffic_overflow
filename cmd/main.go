@@ -79,6 +79,18 @@ func correctDb(passwd string, trafficLimits map[string]int64) {
 			}
 			if limit != trafficLimit {
 				fmt.Println(name, "数据有误:", limit, trafficLimit)
+				updateQuery := "update kvm_available set traffic_limit = ? where name = ?"
+				result, err := db.Exec(updateQuery, trafficLimit, name)
+				if err != nil {
+					panic(err.Error())
+				}
+				{
+					rowsAffected, err := result.RowsAffected()
+					if err != nil {
+						panic(err.Error())
+					}
+					fmt.Println("更新完成，更换了 %d 行数据", rowsAffected)
+				}
 			}
 		}
 	}
