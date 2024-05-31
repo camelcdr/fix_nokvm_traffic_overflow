@@ -80,7 +80,7 @@ func correctDb(passwd string, trafficLimits map[string]int64) {
 				panic(err.Error())
 			}
 			rows.Close()
-			if limit != trafficLimit {
+			if limit != trafficLimit && limit == 0 {
 				fmt.Println(name, "数据有误:", limit, trafficLimit)
 				updateQuery := "update kvm_available set traffic_limit = ? where name = ?"
 				result, err := db.Exec(updateQuery, trafficLimit, name)
